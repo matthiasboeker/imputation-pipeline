@@ -1,42 +1,41 @@
 from typing import Any, Dict, List, Union
-import functools
 from dataclasses import dataclass, field, fields
 from abc import ABC, abstractmethod
 import pandas as pd
+import numpy as np
 
 
-@dataclass
+def parse_to_numpy_tensor(data_obj: Union[np.array, pd.DataFrame]):
+    if isinstance(data_obj, pd.DataFrame):
+        data_obj = data_obj.to_records(index=False)
+    return np.expand_dims(data_obj, axis=len(data_obj.shape))
+
+
+@dataclass(frozen=True)
 class TransformerData:
     X: pd.DataFrame = field(default_factory=pd.DataFrame)
     y: pd.DataFrame = field(default_factory=pd.DataFrame)
 
-    def apply_function(self, transformer):
-        for field_ in fields(self.__class__):
-            data_field = getattr(self, field_.name)
-            print(transformer.function)
-            if len(data_field.shape) < 2:
-                data_field = data_field.values.reshape(-1, 1)
-            setattr(
-                    self, field_.name, pd.DataFrame(transformer.fit_transform(data_field))
-                )
+    #def __post_init__(self):
+    #    self.X = [self.X]
+    #    self.y = [self.y]
+
+    #def apply_function(self, transformer):
+    #    self.X = [transformer.fit_transform(batch) for batch in self.X]
+    #    self.y = [transformer.fit_transform(batch) for batch in self.y]
 
     def get_summary(self):
         summary_statistics = {}
         for field_ in fields(self.__class__):
             summary_statistics[field_.name] = {}
             data_field = getattr(self, field_.name)
-            summary_statistics[field_.name]["mean"] = data_field.mean()
-            summary_statistics[field_.name]["median"] = data_field.median()
-            summary_statistics[field_.name]["max"] = data_field.max()
         return summary_statistics
 
 
 class Transformer:
-    def __init__(self, function):
+    def __init__(self, function, arguments):
         self.function = function
-        self.arguments = {}
-
-        functools.update_wrapper(self, function)
+        self.arguments = arguments
 
     def __call__(self, **arguments):
         self.arguments = arguments
@@ -49,12 +48,11 @@ class Transformer:
 class PipelineModule(ABC):
 
     transformers: list = field(default_factory=list)
-    arguments: list = field(default_factory=list)
     module_summary: dict = field(default_factory=dict)
 
     @classmethod
-    def init_module(cls, transformers: List[Union[Transformer, callable]], arguments):
-        return cls(transformers, arguments, {})
+    def init_module(cls, transformers: List[Union[Transformer, callable]]):
+        return cls(transformers, {})
 
     @abstractmethod
     def get_summary(self, data: TransformerData):
@@ -76,13 +74,20 @@ class Pipeline:
         return data
 
 
+def run_module(input_data: TransformerData, transformers: List[Transformer]) -> TransformerData:
+    X = input_data.X
+    y = input_data.y
+    for transformer in transformers:
+        X = transformer.fit_transform(X)
+        y = transformer.fit_transform(y)
+    return TransformerData(X, y)
+
+
 class PreprocessingModule(PipelineModule):
     def run(self, transformer_data) -> TransformerData:
-        for part, args in zip(self.transformers, self.arguments):
-            part.arguments = args
-            transformer_data.apply_function(part)
-        self.module_summary = transformer_data.get_summary()
-        return transformer_data
+        output_transformer_data = run_module(transformer_data, self.transformers)
+        self.module_summary = output_transformer_data.get_summary()
+        return output_transformer_data
 
     def get_summary(self, transformed_data: TransformerData):
         return transformed_data.get_summary()
@@ -90,10 +95,9 @@ class PreprocessingModule(PipelineModule):
 
 class ImputationModule(PipelineModule):
     def run(self, transformer_data) -> TransformerData:
-        for part in self.transformers:
-            transformer_data.apply_function(part)
-        self.module_summary = transformer_data.get_summary()
-        return transformer_data
+        output_transformer_data = run_module(transformer_data, self.transformers)
+        self.module_summary = output_transformer_data.get_summary()
+        return output_transformer_data
 
     def get_summary(self, transformed_data: TransformerData):
         return transformed_data.get_summary()
