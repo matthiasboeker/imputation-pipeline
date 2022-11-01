@@ -13,16 +13,8 @@ def parse_to_numpy_tensor(data_obj: Union[np.array, pd.DataFrame]):
 
 @dataclass(frozen=True)
 class TransformerData:
-    X: pd.DataFrame = field(default_factory=pd.DataFrame)
-    y: pd.DataFrame = field(default_factory=pd.DataFrame)
-
-    #def __post_init__(self):
-    #    self.X = [self.X]
-    #    self.y = [self.y]
-
-    #def apply_function(self, transformer):
-    #    self.X = [transformer.fit_transform(batch) for batch in self.X]
-    #    self.y = [transformer.fit_transform(batch) for batch in self.y]
+    X: List[pd.DataFrame] = field(default_factory=List[pd.DataFrame])
+    y: List[pd.DataFrame] = field(default_factory=List[pd.DataFrame])
 
     def get_summary(self):
         summary_statistics = {}
@@ -59,7 +51,7 @@ class PipelineModule(ABC):
         pass
 
     @abstractmethod
-    def run(self, transformer_data) -> TransformerData:
+    def run(self, transformer_data: TransformerData) -> TransformerData:
         pass
 
 
@@ -68,19 +60,36 @@ class Pipeline:
         self.modules = modules
 
     def run(self, X, y):
-        data = TransformerData(X, y)
+        data = TransformerData([X], [y])
         for module in self.modules:
             data = module.run(data)
         return data
 
 
-def run_module(input_data: TransformerData, transformers: List[Transformer]) -> TransformerData:
+def run_module(input_data: TransformerData, transformers: List[Transformer]):
     X = input_data.X
     y = input_data.y
     for transformer in transformers:
-        X = transformer.fit_transform(X)
-        y = transformer.fit_transform(y)
+        X = [transformer.fit_transform(batch) for batch in X]
+        y = [transformer.fit_transform(batch) for batch in y]
     return TransformerData(X, y)
+
+
+class TSTrainTestSplittingModule(PipelineModule):
+
+    @classmethod
+    def init_module(cls, splitter):
+        return cls([splitter], {})
+
+    def run(self, transformer_data) -> TransformerData:
+        splitter, = self.transformers
+        X, = transformer_data.X
+        y, = transformer_data.y
+        train_batches, val_batches = splitter.fit_transform(X, y)
+        return TransformerData(train_batches, val_batches)
+
+    def get_summary(self, transformed_data: TransformerData):
+        return transformed_data.get_summary()
 
 
 class PreprocessingModule(PipelineModule):

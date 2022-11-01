@@ -2,7 +2,7 @@ from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
 
-from pmsys_pipeline.pipeline_structure import Transformer
+from pmsys_pipeline.pipeline_structure import Transformer, TransformerData
 
 
 def get_histogram(feature: np.array):
@@ -23,9 +23,8 @@ def ts_train_val_split(
     lag: int,
     validate_size: float,
 ) -> Tuple[np.array, np.array]:
-
-    predictor_ts = np.array(predictor_ts, ndmin=2)
-
+    predictor_ts = np.array(predictor_ts)
+    dependent_ts = np.array(dependent_ts)
     predictor_batches = [
         predictor_ts[i : i + window_size, :]
         for i in range(0, len(predictor_ts) - window_size, lag)
@@ -34,6 +33,7 @@ def ts_train_val_split(
         dependent_ts[i : i + window_size, :]
         for i in range(0, len(dependent_ts) - window_size, lag)
     ]
+
     train_batches = []
     val_batches = []
     for pred_batch, dep_batch in zip(predictor_batches, dependent_batches):
@@ -44,16 +44,14 @@ def ts_train_val_split(
     return train_batches, val_batches
 
 
-class TSTrainTestSplit(Transformer):
-    def __init__(self, window_size: int, lag: int, validate_size: float):
-        super().__init__(
-            ts_train_val_split,
-            {
-                "window_size": window_size,
-                "lag": lag,
-                "validate_size": validate_size,
-            },
-        )
+class TSTrainTestSplit:
+    def __init__(self, window_size: int, lag: int, validation_size: int):
+        self.window_size = window_size
+        self.lag = lag
+        self.validation_size = validation_size
+
+    def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame):
+        return ts_train_val_split(X, y, self.window_size, self.lag, self.validation_size)
 
 
 def normalise_data(input_df: pd.DataFrame) -> pd.DataFrame:
