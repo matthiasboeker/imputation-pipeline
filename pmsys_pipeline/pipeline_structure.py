@@ -1,8 +1,16 @@
-from typing import Any, Dict, Callable, List, Union
-from dataclasses import dataclass, field, fields
-from abc import ABC, abstractmethod
-import pandas as pd
+from abc import ABC
+from abc import abstractmethod
+from dataclasses import dataclass
+from dataclasses import field
+from typing import Callable
+from typing import List
+from typing import Union
+
 import numpy as np
+import pandas as pd
+
+from pmsys_pipeline.summary_functions import get_correlation_summary
+from pmsys_pipeline.summary_functions import get_feature_histogram_summary
 
 
 def parse_to_numpy_tensor(data_obj: Union[np.array, pd.DataFrame]):
@@ -18,9 +26,8 @@ class TransformerData:
 
     def get_summary(self):
         summary_statistics = {}
-        for field_ in fields(self.__class__):
-            summary_statistics[field_.name] = {}
-            data_field = getattr(self, field_.name)
+        summary_statistics.update(get_correlation_summary(self.X))
+        summary_statistics.update(get_feature_histogram_summary(self.X))
         return summary_statistics
 
 
@@ -85,7 +92,9 @@ class TSTrainTestSplittingModule(PipelineModule):
         (X,) = transformer_data.X
         (y,) = transformer_data.y
         train_batches, val_batches = splitter.fit_transform(X, y)
-        return TransformerData(train_batches, val_batches)
+        output_transformer_data = TransformerData(train_batches, val_batches)
+        self.module_summary = output_transformer_data.get_summary()
+        return output_transformer_data
 
     def get_summary(self, transformed_data: TransformerData):
         return transformed_data.get_summary()
