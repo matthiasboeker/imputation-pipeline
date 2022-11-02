@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Callable, List, Union
 from dataclasses import dataclass, field, fields
 from abc import ABC, abstractmethod
 import pandas as pd
@@ -43,7 +43,7 @@ class PipelineModule(ABC):
     module_summary: dict = field(default_factory=dict)
 
     @classmethod
-    def init_module(cls, transformers: List[Union[Transformer, callable]]):
+    def init_module(cls, transformers: List[Union[Transformer, Callable]]):
         return cls(transformers, {})
 
     @abstractmethod
@@ -76,15 +76,14 @@ def run_module(input_data: TransformerData, transformers: List[Transformer]):
 
 
 class TSTrainTestSplittingModule(PipelineModule):
-
     @classmethod
     def init_module(cls, splitter):
         return cls([splitter], {})
 
     def run(self, transformer_data) -> TransformerData:
-        splitter, = self.transformers
-        X, = transformer_data.X
-        y, = transformer_data.y
+        (splitter,) = self.transformers
+        (X,) = transformer_data.X
+        (y,) = transformer_data.y
         train_batches, val_batches = splitter.fit_transform(X, y)
         return TransformerData(train_batches, val_batches)
 

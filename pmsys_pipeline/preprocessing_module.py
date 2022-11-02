@@ -21,7 +21,7 @@ def ts_train_val_split(
     dependent_ts: Union[pd.DataFrame, np.array],
     window_size: int,
     lag: int,
-    validate_size: float,
+    validate_size: int,
 ) -> Tuple[np.array, np.array]:
     predictor_ts = np.array(predictor_ts)
     dependent_ts = np.array(dependent_ts)
@@ -44,14 +44,16 @@ def ts_train_val_split(
     return train_batches, val_batches
 
 
-class TSTrainTestSplit:
+class TSTrainValSplit:
     def __init__(self, window_size: int, lag: int, validation_size: int):
         self.window_size = window_size
         self.lag = lag
         self.validation_size = validation_size
 
     def fit_transform(self, X: pd.DataFrame, y: pd.DataFrame):
-        return ts_train_val_split(X, y, self.window_size, self.lag, self.validation_size)
+        return ts_train_val_split(
+            X, y, self.window_size, self.lag, self.validation_size
+        )
 
 
 def normalise_data(input_df: pd.DataFrame) -> pd.DataFrame:
