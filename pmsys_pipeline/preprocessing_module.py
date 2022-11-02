@@ -1,8 +1,14 @@
-from typing import List, Tuple, Union
-import pandas as pd
-import numpy as np
+from typing import Tuple
+from typing import Union
 
-from pmsys_pipeline.pipeline_structure import Transformer, TransformerData
+import numpy as np
+import pandas as pd
+
+from pmsys_pipeline.pipeline_structure import Transformer
+
+
+class TrainSetLargerThanValSet(Exception):
+    print("The training set is smaller than validation set.")
 
 
 def get_histogram(feature: np.array):
@@ -23,6 +29,11 @@ def ts_train_val_split(
     lag: int,
     validate_size: int,
 ) -> Tuple[np.array, np.array]:
+
+    if window_size - validate_size < validate_size:
+        print("here")
+        raise TrainSetLargerThanValSet
+
     predictor_ts = np.array(predictor_ts)
     dependent_ts = np.array(dependent_ts)
     predictor_batches = [
