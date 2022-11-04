@@ -9,21 +9,19 @@ import pandas as pd
 
 def get_feature_histogram_summary(
     batches: List[Union[pd.DataFrame, np.array]]
-) -> Dict[str, List[Any]]:
-    histogram_summary: Dict = {"feature_histograms": []}
+) -> List[Any]:
+    feat_distributions = []
     for batch in batches:
         batch_histograms: Dict = {}
         for i in range(0, batch.shape[1]):
             feature = pd.DataFrame(batch).iloc[:, i]
             batch_histograms[feature.name] = feature.value_counts(bins=10)
-        histogram_summary["feature_histograms"].append(batch_histograms)
-    return histogram_summary
+        feat_distributions.append(batch_histograms)
+    return feat_distributions
 
 
-def get_correlation_summary(
-    batches: List[Union[pd.DataFrame, np.array]]
-) -> Dict[str, List[Any]]:
-    correlation_summary: Dict = {"feature_correlation": []}
+def get_correlation_summary(batches: List[Union[pd.DataFrame, np.array]]) -> List[Any]:
+    correlations = []
     for batch in batches:
-        correlation_summary["feature_correlation"].append(pd.DataFrame(batch).corr())
-    return correlation_summary
+        correlations.append(pd.DataFrame(batch).corr())
+    return correlations
