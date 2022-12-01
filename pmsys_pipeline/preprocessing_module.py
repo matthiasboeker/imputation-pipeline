@@ -39,11 +39,11 @@ def ts_train_val_split(
     predictor_ts = np.array(predictor_ts)
     dependent_ts = np.array(dependent_ts)
     predictor_batches = [
-        predictor_ts[i : i + window_size, :]
+        predictor_ts[i: i + window_size, :]
         for i in range(0, len(predictor_ts) - window_size, lag)
     ]
     dependent_batches = [
-        dependent_ts[i : i + window_size, :]
+        dependent_ts[i: i + window_size, :]
         for i in range(0, len(dependent_ts) - window_size, lag)
     ]
 

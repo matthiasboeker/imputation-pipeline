@@ -98,7 +98,8 @@ class Pipeline:
 
     def run(self, X, y, return_format: str = "multi-batch"):
         X = _check_X(X)
-        y = _check_X(y)
+        if y is not None:
+            y = _check_X(y)
         data = TransformerData([X], [y])
         for name, module in self.modules.items():
             data = module.run(data)
