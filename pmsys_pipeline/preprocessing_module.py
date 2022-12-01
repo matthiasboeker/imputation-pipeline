@@ -8,10 +8,6 @@ from pmsys_pipeline.pipeline_structure import Transformer
 
 
 class TrainSetLargerThanValSet(Exception):
-    print("The training set is smaller than validation set.")
-
-
-def get_histogram(feature: np.array):
     pass
 
 
@@ -30,26 +26,34 @@ def ts_train_val_split(
     validate_size: int,
 ) -> Tuple[np.array, np.array]:
 
+    if isinstance(predictor_ts, pd.DataFrame):
+        X_feature_names = predictor_ts.columns
+    else:
+        X_feature_names = range(0, predictor_ts.shape[1])
+
     if window_size - validate_size < validate_size:
-        print("here")
-        raise TrainSetLargerThanValSet
+        raise TrainSetLargerThanValSet(
+            "The training set is smaller than validation set."
+        )
 
     predictor_ts = np.array(predictor_ts)
     dependent_ts = np.array(dependent_ts)
     predictor_batches = [
-        predictor_ts[i : i + window_size, :]
+        predictor_ts[i: i + window_size, :]
         for i in range(0, len(predictor_ts) - window_size, lag)
     ]
     dependent_batches = [
-        dependent_ts[i : i + window_size, :]
+        dependent_ts[i: i + window_size, :]
         for i in range(0, len(dependent_ts) - window_size, lag)
     ]
 
     train_batches = []
     val_batches = []
     for pred_batch, dep_batch in zip(predictor_batches, dependent_batches):
-        val_batch = dep_batch[len(dep_batch) - validate_size :, :]
-        train_batch = pred_batch[: len(dep_batch) - validate_size, :]
+        val_batch = pd.DataFrame(dep_batch[len(dep_batch) - validate_size :, :])
+        train_batch = pd.DataFrame(
+            pred_batch[: len(dep_batch) - validate_size, :], columns=X_feature_names
+        )
         train_batches.append(train_batch)
         val_batches.append(val_batch)
     return train_batches, val_batches
